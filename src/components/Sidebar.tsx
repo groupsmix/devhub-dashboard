@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import type { Project, ProjectStatus } from '../types/project';
-import { Plus, Search, FolderOpen, Globe, Rocket, Clock, Pause, Lightbulb, CalendarClock } from 'lucide-react';
+import { Plus, Search, ClipboardList, Globe, Rocket, Clock, Pause, Lightbulb, CalendarClock } from 'lucide-react';
 
 const STATUS_ICONS: Record<ProjectStatus, React.ReactNode> = {
   'live': <Globe className="w-3 h-3 text-emerald-400" />,
@@ -49,7 +49,7 @@ export default function Sidebar({ projects, selectedId, onSelect, onAddNew, onSh
       {/* Header */}
       <div className="p-4 border-b border-gray-800">
         <h1 className="text-lg font-bold text-white tracking-tight flex items-center gap-2">
-          <FolderOpen className="w-5 h-5 text-blue-400" />
+          <ClipboardList className="w-5 h-5 text-blue-400" />
           DevHub
         </h1>
         <p className="text-xs text-gray-500 mt-1">Project Command Center</p>

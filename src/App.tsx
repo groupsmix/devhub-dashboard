@@ -5,7 +5,8 @@ import Sidebar from './components/Sidebar';
 import StatsBar from './components/StatsBar';
 import ProjectDetail from './components/ProjectDetail';
 import TodayView from './components/TodayView';
-import { FolderOpen } from 'lucide-react';
+import NewProjectForm from './components/NewProjectForm';
+import { ClipboardList } from 'lucide-react';
 
 function App() {
   const {
@@ -16,6 +17,7 @@ function App() {
 
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [showToday, setShowToday] = useState(false);
+  const [showNewForm, setShowNewForm] = useState(false);
 
   const selectedProject = projects.find(p => p.id === selectedId) || null;
 
@@ -26,9 +28,15 @@ function App() {
   }, [projects, selectedId]);
 
   const handleAddNew = () => {
-    const newProject = addProject({ name: 'New Project' });
-    setSelectedId(newProject.id);
+    setShowNewForm(true);
+    setSelectedId(null);
     setShowToday(false);
+  };
+
+  const handleSubmitNew = (data: Parameters<typeof addProject>[0]) => {
+    const newProject = addProject(data);
+    setSelectedId(newProject.id);
+    setShowNewForm(false);
   };
 
   const handleSelectProject = (id: string) => {
@@ -58,7 +66,14 @@ function App() {
       />
       <div className="flex-1 flex flex-col overflow-hidden">
         <StatsBar projects={projects} />
-        {showToday ? (
+        {showNewForm ? (
+          <NewProjectForm
+            categories={categories}
+            onSubmit={handleSubmitNew}
+            onCancel={() => setShowNewForm(false)}
+            onAddCategory={addCategory}
+          />
+        ) : showToday ? (
           <TodayView
             projects={projects}
             tasks={todayTasks}
@@ -79,7 +94,7 @@ function App() {
         ) : (
           <div className="flex-1 flex items-center justify-center">
             <div className="text-center">
-              <FolderOpen className="w-16 h-16 text-gray-700 mx-auto mb-4" />
+              <ClipboardList className="w-16 h-16 text-gray-700 mx-auto mb-4" />
               <h2 className="text-xl font-semibold text-gray-400 mb-2">Welcome to DevHub</h2>
               <p className="text-gray-500 mb-6 max-w-md">
                 Your personal project command center. Add a project to get started, or check today's focus.

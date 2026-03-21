@@ -3,8 +3,22 @@ import type { Project, ProjectStatus, Priority, ChecklistItem, WorkflowStep, Fin
 import {
   Globe, Rocket, Pause, Lightbulb, CalendarClock, Trash2, Plus, X, Check,
   ExternalLink, DollarSign, Mail, Wrench, TrendingUp, FileText, ListChecks,
-  GitBranch, ChevronDown, ChevronUp, Pencil, AlertCircle
+  GitBranch, ChevronDown, ChevronUp, Pencil, AlertCircle, LayoutGrid
 } from 'lucide-react';
+
+type TabKey = 'all' | 'checklist' | 'progress' | 'workflow' | 'tools' | 'emails' | 'links' | 'finance' | 'notes';
+
+const TABS: { key: TabKey; label: string; icon: React.ReactNode }[] = [
+  { key: 'all', label: 'All', icon: <LayoutGrid className="w-3.5 h-3.5" /> },
+  { key: 'checklist', label: 'Checklist', icon: <ListChecks className="w-3.5 h-3.5" /> },
+  { key: 'progress', label: 'Progress', icon: <AlertCircle className="w-3.5 h-3.5" /> },
+  { key: 'workflow', label: 'Workflow', icon: <GitBranch className="w-3.5 h-3.5" /> },
+  { key: 'tools', label: 'Tools', icon: <Wrench className="w-3.5 h-3.5" /> },
+  { key: 'emails', label: 'Emails', icon: <Mail className="w-3.5 h-3.5" /> },
+  { key: 'links', label: 'Links', icon: <ExternalLink className="w-3.5 h-3.5" /> },
+  { key: 'finance', label: 'Finance', icon: <DollarSign className="w-3.5 h-3.5" /> },
+  { key: 'notes', label: 'Notes', icon: <FileText className="w-3.5 h-3.5" /> },
+];
 
 function generateId(): string {
   return Date.now().toString(36) + Math.random().toString(36).substr(2, 9);
@@ -100,8 +114,10 @@ export default function ProjectDetail({ project, categories, onUpdate, onDelete,
   const [editingName, setEditingName] = useState(false);
   const [nameInput, setNameInput] = useState(project.name);
   const [newCategoryInput, setNewCategoryInput] = useState('');
+  const [activeTab, setActiveTab] = useState<TabKey>('all');
 
   const update = (updates: Partial<Project>) => onUpdate(project.id, updates);
+  const show = (tab: TabKey) => activeTab === 'all' || activeTab === tab;
 
   // Checklist helpers
   const addChecklistItem = (text: string) => {
@@ -309,61 +325,95 @@ export default function ProjectDetail({ project, categories, onUpdate, onDelete,
           </div>
         </div>
 
+        {/* Tab Navigation */}
+        <div className="bg-gray-800/50 rounded-xl border border-gray-700/50 p-1.5 flex flex-wrap gap-1">
+          {TABS.map(tab => (
+            <button
+              key={tab.key}
+              onClick={() => setActiveTab(tab.key)}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                activeTab === tab.key
+                  ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/20'
+                  : 'text-gray-400 hover:bg-gray-700 hover:text-white'
+              }`}
+            >
+              {tab.icon}
+              {tab.label}
+            </button>
+          ))}
+        </div>
+
         {/* Checklist */}
-        <Section title="Checklist" icon={<ListChecks className="w-4 h-4 text-blue-400" />}>
-          <ChecklistSection items={project.checklist} onAdd={addChecklistItem} onToggle={toggleChecklistItem} onRemove={removeChecklistItem} />
-        </Section>
+        {show('checklist') && (
+          <Section title="Checklist" icon={<ListChecks className="w-4 h-4 text-blue-400" />}>
+            <ChecklistSection items={project.checklist} onAdd={addChecklistItem} onToggle={toggleChecklistItem} onRemove={removeChecklistItem} />
+          </Section>
+        )}
 
         {/* What's Done / Not Done */}
-        <div className="grid grid-cols-2 gap-4">
-          <Section title="What's Done" icon={<Check className="w-4 h-4 text-emerald-400" />}>
-            <TagInput tags={project.whatsDone} onChange={v => update({ whatsDone: v })} placeholder="Add completed item..." />
-          </Section>
-          <Section title="Still Needs" icon={<AlertCircle className="w-4 h-4 text-amber-400" />}>
-            <TagInput tags={project.whatsNotDone} onChange={v => update({ whatsNotDone: v })} placeholder="Add pending item..." />
-          </Section>
-        </div>
+        {show('progress') && (
+          <div className="grid grid-cols-2 gap-4">
+            <Section title="What's Done" icon={<Check className="w-4 h-4 text-emerald-400" />}>
+              <TagInput tags={project.whatsDone} onChange={v => update({ whatsDone: v })} placeholder="Add completed item..." />
+            </Section>
+            <Section title="Still Needs" icon={<AlertCircle className="w-4 h-4 text-amber-400" />}>
+              <TagInput tags={project.whatsNotDone} onChange={v => update({ whatsNotDone: v })} placeholder="Add pending item..." />
+            </Section>
+          </div>
+        )}
 
         {/* Workflow */}
-        <Section title="Workflow" icon={<GitBranch className="w-4 h-4 text-purple-400" />}>
-          <WorkflowSection steps={project.workflow} onAdd={addWorkflowStep} onToggle={toggleWorkflowStep} onRemove={removeWorkflowStep} />
-        </Section>
+        {show('workflow') && (
+          <Section title="Workflow" icon={<GitBranch className="w-4 h-4 text-purple-400" />}>
+            <WorkflowSection steps={project.workflow} onAdd={addWorkflowStep} onToggle={toggleWorkflowStep} onRemove={removeWorkflowStep} />
+          </Section>
+        )}
 
         {/* Tools & Traffic */}
-        <div className="grid grid-cols-2 gap-4">
-          <Section title="Tools & AI" icon={<Wrench className="w-4 h-4 text-cyan-400" />}>
-            <TagInput tags={project.toolsUsed} onChange={v => update({ toolsUsed: v })} placeholder="Supabase, Vercel, GPT..." />
-          </Section>
-          <Section title="Traffic Sources" icon={<TrendingUp className="w-4 h-4 text-green-400" />}>
-            <TagInput tags={project.trafficSources} onChange={v => update({ trafficSources: v })} placeholder="Google, Twitter, TikTok..." />
-          </Section>
-        </div>
+        {show('tools') && (
+          <div className="grid grid-cols-2 gap-4">
+            <Section title="Tools & AI" icon={<Wrench className="w-4 h-4 text-cyan-400" />}>
+              <TagInput tags={project.toolsUsed} onChange={v => update({ toolsUsed: v })} placeholder="Supabase, Vercel, GPT..." />
+            </Section>
+            <Section title="Traffic Sources" icon={<TrendingUp className="w-4 h-4 text-green-400" />}>
+              <TagInput tags={project.trafficSources} onChange={v => update({ trafficSources: v })} placeholder="Google, Twitter, TikTok..." />
+            </Section>
+          </div>
+        )}
 
         {/* Connected Emails */}
-        <Section title="Connected Emails" icon={<Mail className="w-4 h-4 text-orange-400" />}>
-          <TagInput tags={project.connectedEmails} onChange={v => update({ connectedEmails: v })} placeholder="you@email.com" />
-        </Section>
+        {show('emails') && (
+          <Section title="Connected Emails" icon={<Mail className="w-4 h-4 text-orange-400" />}>
+            <TagInput tags={project.connectedEmails} onChange={v => update({ connectedEmails: v })} placeholder="you@email.com" />
+          </Section>
+        )}
 
         {/* Links */}
-        <Section title="Direct Links" icon={<ExternalLink className="w-4 h-4 text-blue-400" />}>
-          <LinksSection links={project.links} onAdd={addLink} onRemove={removeLink} />
-        </Section>
+        {show('links') && (
+          <Section title="Direct Links" icon={<ExternalLink className="w-4 h-4 text-blue-400" />}>
+            <LinksSection links={project.links} onAdd={addLink} onRemove={removeLink} />
+          </Section>
+        )}
 
         {/* Finance */}
-        <Section title="Finance" icon={<DollarSign className="w-4 h-4 text-green-400" />}>
-          <FinanceSection entries={project.finance} onAdd={addFinanceEntry} onRemove={removeFinanceEntry} totalCosts={totalCosts} totalRevenue={totalRevenue} />
-        </Section>
+        {show('finance') && (
+          <Section title="Finance" icon={<DollarSign className="w-4 h-4 text-green-400" />}>
+            <FinanceSection entries={project.finance} onAdd={addFinanceEntry} onRemove={removeFinanceEntry} totalCosts={totalCosts} totalRevenue={totalRevenue} />
+          </Section>
+        )}
 
         {/* Notes */}
-        <Section title="Notes" icon={<FileText className="w-4 h-4 text-gray-400" />}>
-          <textarea
-            value={project.notes}
-            onChange={e => update({ notes: e.target.value })}
-            placeholder="Free-form notes..."
-            rows={5}
-            className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-blue-500 resize-none"
-          />
-        </Section>
+        {show('notes') && (
+          <Section title="Notes" icon={<FileText className="w-4 h-4 text-gray-400" />}>
+            <textarea
+              value={project.notes}
+              onChange={e => update({ notes: e.target.value })}
+              placeholder="Free-form notes..."
+              rows={5}
+              className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-blue-500 resize-none"
+            />
+          </Section>
+        )}
 
         {/* Meta */}
         <div className="text-xs text-gray-600 text-center pb-8">
