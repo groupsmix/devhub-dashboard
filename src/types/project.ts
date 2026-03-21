@@ -1,5 +1,6 @@
 export type ProjectStatus = 'live' | 'in-progress' | 'later' | 'paused' | 'idea';
 export type Priority = 'high' | 'medium' | 'low';
+export type ViewMode = 'detail' | 'kanban' | 'timeline' | 'overview';
 
 export interface ChecklistItem {
   id: string;
@@ -26,6 +27,20 @@ export interface LinkEntry {
   url: string;
 }
 
+export interface ActivityEntry {
+  id: string;
+  projectId: string;
+  projectName: string;
+  action: string;
+  timestamp: string;
+}
+
+export interface Workspace {
+  id: string;
+  name: string;
+  color: string;
+}
+
 export interface Project {
   id: string;
   name: string;
@@ -45,6 +60,11 @@ export interface Project {
   links: LinkEntry[];
   notes: string;
   finance: FinanceEntry[];
+  tags: string[];
+  workspaceId: string;
+  pinned: boolean;
+  deadline: string;
+  startDate: string;
   createdAt: string;
   updatedAt: string;
 }
