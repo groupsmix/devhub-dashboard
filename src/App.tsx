@@ -21,6 +21,7 @@ function App() {
     workspaces, addWorkspace, deleteWorkspace,
     activity,
     exportData, importData,
+    syncStatus, syncError, lastSynced, sheetsEnabled,
   } = useProjects();
 
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -221,7 +222,13 @@ function App() {
         onShowProjects={handleShowProjects}
       />
       <div className="flex-1 flex flex-col overflow-hidden">
-        <StatsBar projects={projects} />
+        <StatsBar
+          projects={projects}
+          syncStatus={syncStatus}
+          syncError={syncError}
+          lastSynced={lastSynced}
+          sheetsEnabled={sheetsEnabled}
+        />
         {renderContent()}
       </div>
 

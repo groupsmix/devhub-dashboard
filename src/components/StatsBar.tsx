@@ -1,11 +1,17 @@
 import type { Project } from '../types/project';
+import type { SyncStatus as SyncStatusType } from '../hooks/useProjects';
 import { Globe, Rocket, Pause, Lightbulb, CalendarClock, DollarSign, FolderOpen } from 'lucide-react';
+import SyncStatusIndicator from './SyncStatus';
 
 interface StatsBarProps {
   projects: Project[];
+  syncStatus?: SyncStatusType;
+  syncError?: string | null;
+  lastSynced?: Date | null;
+  sheetsEnabled?: boolean;
 }
 
-export default function StatsBar({ projects }: StatsBarProps) {
+export default function StatsBar({ projects, syncStatus, syncError, lastSynced, sheetsEnabled }: StatsBarProps) {
   const total = projects.length;
   const live = projects.filter(p => p.status === 'live').length;
   const inProgress = projects.filter(p => p.status === 'in-progress').length;
@@ -33,7 +39,15 @@ export default function StatsBar({ projects }: StatsBarProps) {
 
   return (
     <div className="bg-gray-900 border-b border-gray-800 px-6 py-3">
-      <div className="flex items-center gap-4 overflow-x-auto">
+      <div className="flex items-center gap-4 overflow-x-auto">  
+        {sheetsEnabled && syncStatus && (
+          <SyncStatusIndicator
+            status={syncStatus}
+            error={syncError ?? null}
+            lastSynced={lastSynced ?? null}
+            enabled={sheetsEnabled}
+          />
+        )}
         {stats.map(s => (
           <div key={s.label} className={`flex items-center gap-2 px-3 py-2 rounded-lg ${s.bg} shrink-0`}>
             <span className={s.color}>{s.icon}</span>
