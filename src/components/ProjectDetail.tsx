@@ -1,9 +1,9 @@
 import { useState } from 'react';
-import type { Project, ProjectStatus, Priority, ChecklistItem, WorkflowStep, FinanceEntry, LinkEntry } from '../types/project';
+import type { Project, ProjectStatus, Priority, ChecklistItem, WorkflowStep, FinanceEntry, LinkEntry, Workspace } from '../types/project';
 import {
   Globe, Rocket, Pause, Lightbulb, CalendarClock, Trash2, Plus, X, Check,
   ExternalLink, DollarSign, Mail, Wrench, TrendingUp, FileText, ListChecks,
-  GitBranch, ChevronDown, ChevronUp, Pencil, AlertCircle
+  GitBranch, ChevronDown, ChevronUp, Pencil, AlertCircle, Pin, Tag, Calendar
 } from 'lucide-react';
 
 function generateId(): string {
@@ -30,6 +30,8 @@ interface ProjectDetailProps {
   onUpdate: (id: string, updates: Partial<Project>) => void;
   onDelete: (id: string) => void;
   onAddCategory: (cat: string) => void;
+  workspaces: Workspace[];
+  onTogglePin: (id: string) => void;
 }
 
 interface SectionProps {
@@ -95,11 +97,12 @@ function TagInput({ tags, onChange, placeholder }: { tags: string[]; onChange: (
   );
 }
 
-export default function ProjectDetail({ project, categories, onUpdate, onDelete, onAddCategory }: ProjectDetailProps) {
+export default function ProjectDetail({ project, categories, onUpdate, onDelete, onAddCategory, workspaces, onTogglePin }: ProjectDetailProps) {
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [editingName, setEditingName] = useState(false);
   const [nameInput, setNameInput] = useState(project.name);
   const [newCategoryInput, setNewCategoryInput] = useState('');
+  const [newTagInput, setNewTagInput] = useState('');
 
   const update = (updates: Partial<Project>) => onUpdate(project.id, updates);
 
@@ -188,6 +191,13 @@ export default function ProjectDetail({ project, categories, onUpdate, onDelete,
               )}
             </div>
             <div className="flex items-center gap-2">
+              <button
+                onClick={() => onTogglePin(project.id)}
+                className={`transition-colors ${project.pinned ? 'text-amber-400 hover:text-amber-300' : 'text-gray-600 hover:text-amber-400'}`}
+                title={project.pinned ? 'Unpin project' : 'Pin project'}
+              >
+                <Pin className="w-5 h-5" />
+              </button>
               {confirmDelete ? (
                 <div className="flex items-center gap-2">
                   <span className="text-xs text-red-400">Delete?</span>
@@ -267,6 +277,98 @@ export default function ProjectDetail({ project, categories, onUpdate, onDelete,
                 }}
                 className="bg-gray-700 border border-gray-600 rounded-lg px-2 py-1 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-blue-500 w-28"
               />
+            </div>
+          </div>
+
+          {/* Workspace & Tags */}
+          <div className="flex flex-wrap items-center gap-3 mt-4">
+            {/* Workspace selector */}
+            <div>
+              <label className="text-xs text-gray-500 mb-1 block">Workspace</label>
+              <select
+                value={project.workspaceId || 'ws-default'}
+                onChange={e => update({ workspaceId: e.target.value })}
+                className="bg-gray-700 border border-gray-600 rounded-lg px-2 py-1 text-xs text-white focus:outline-none focus:border-blue-500"
+              >
+                {workspaces.map(ws => (
+                  <option key={ws.id} value={ws.id}>{ws.name}</option>
+                ))}
+              </select>
+            </div>
+
+            <div className="w-px h-8 bg-gray-700" />
+
+            {/* Dates */}
+            <div>
+              <label className="text-xs text-gray-500 mb-1 block flex items-center gap-1">
+                <Calendar className="w-3 h-3" /> Start Date
+              </label>
+              <input
+                type="date"
+                value={project.startDate || ''}
+                onChange={e => update({ startDate: e.target.value })}
+                className="bg-gray-700 border border-gray-600 rounded-lg px-2 py-1 text-xs text-white focus:outline-none focus:border-blue-500"
+              />
+            </div>
+            <div>
+              <label className="text-xs text-gray-500 mb-1 block flex items-center gap-1">
+                <Calendar className="w-3 h-3" /> Deadline
+              </label>
+              <input
+                type="date"
+                value={project.deadline || ''}
+                onChange={e => update({ deadline: e.target.value })}
+                className="bg-gray-700 border border-gray-600 rounded-lg px-2 py-1 text-xs text-white focus:outline-none focus:border-blue-500"
+              />
+            </div>
+          </div>
+
+          {/* Tags */}
+          <div className="mt-4">
+            <label className="text-xs text-gray-500 mb-1 block flex items-center gap-1">
+              <Tag className="w-3 h-3" /> Tags
+            </label>
+            <div className="flex flex-wrap gap-1.5 mb-2">
+              {(project.tags || []).map((tag, i) => (
+                <span key={i} className="bg-purple-500/20 text-purple-300 text-xs px-2 py-1 rounded-md flex items-center gap-1">
+                  {tag}
+                  <button
+                    onClick={() => update({ tags: project.tags.filter((_, j) => j !== i) })}
+                    className="text-purple-400 hover:text-red-400"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                </span>
+              ))}
+            </div>
+            <div className="flex gap-2">
+              <input
+                type="text"
+                placeholder="Add tag..."
+                value={newTagInput}
+                onChange={e => setNewTagInput(e.target.value)}
+                onKeyDown={e => {
+                  if (e.key === 'Enter' && newTagInput.trim()) {
+                    e.preventDefault();
+                    if (!(project.tags || []).includes(newTagInput.trim())) {
+                      update({ tags: [...(project.tags || []), newTagInput.trim()] });
+                    }
+                    setNewTagInput('');
+                  }
+                }}
+                className="flex-1 bg-gray-700 border border-gray-600 rounded-lg px-3 py-1.5 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-blue-500"
+              />
+              <button
+                onClick={() => {
+                  if (newTagInput.trim() && !(project.tags || []).includes(newTagInput.trim())) {
+                    update({ tags: [...(project.tags || []), newTagInput.trim()] });
+                  }
+                  setNewTagInput('');
+                }}
+                className="bg-gray-700 hover:bg-gray-600 text-gray-300 rounded-lg px-2 py-1.5 transition-colors"
+              >
+                <Plus className="w-4 h-4" />
+              </button>
             </div>
           </div>
 
