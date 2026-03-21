@@ -45,12 +45,13 @@ interface SidebarProps {
   onChangeView: (view: ViewMode) => void;
   onExport: () => void;
   onImport: (json: string) => void;
+  onShowProjects: () => void;
 }
 
 export default function Sidebar({
   projects, selectedId, onSelect, onAddNew, onShowToday, showingToday,
   workspaces, onAddWorkspace, onDeleteWorkspace, onTogglePin,
-  currentView, onChangeView, onExport, onImport,
+  currentView, onChangeView, onExport, onImport, onShowProjects,
 }: SidebarProps) {
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<ProjectStatus | 'all'>('all');
@@ -133,10 +134,13 @@ export default function Sidebar({
       {/* Header */}
       <div className="p-4 border-b border-gray-800">
         <div className="flex items-center justify-between">
-          <h1 className="text-lg font-bold text-white tracking-tight flex items-center gap-2">
+          <button
+            onClick={onShowProjects}
+            className="text-lg font-bold text-white tracking-tight flex items-center gap-2 hover:text-blue-400 transition-colors"
+          >
             <FolderOpen className="w-5 h-5 text-blue-400" />
             DevHub
-          </h1>
+          </button>
           <button
             onClick={() => setShowSettings(!showSettings)}
             className="text-gray-500 hover:text-gray-300 transition-colors"

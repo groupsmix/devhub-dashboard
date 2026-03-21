@@ -1,6 +1,8 @@
 export type ProjectStatus = 'live' | 'in-progress' | 'later' | 'paused' | 'idea';
 export type Priority = 'high' | 'medium' | 'low';
-export type ViewMode = 'detail' | 'kanban' | 'timeline' | 'overview';
+export type ViewMode = 'detail' | 'kanban' | 'timeline' | 'overview' | 'projects';
+
+export type ProjectTab = 'all' | 'checklist' | 'notes' | 'workflow' | 'links' | 'finance';
 
 export interface ChecklistItem {
   id: string;
