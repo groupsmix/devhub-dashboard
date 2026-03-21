@@ -5,6 +5,7 @@ import type { ViewMode, ProjectStatus } from './types/project';
 import Sidebar from './components/Sidebar';
 import StatsBar from './components/StatsBar';
 import ProjectDetail from './components/ProjectDetail';
+import ProjectListView from './components/ProjectListView';
 import TodayView from './components/TodayView';
 import OverviewDashboard from './components/OverviewDashboard';
 import KanbanBoard from './components/KanbanBoard';
@@ -24,7 +25,7 @@ function App() {
 
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [showToday, setShowToday] = useState(false);
-  const [currentView, setCurrentView] = useState<ViewMode>('overview');
+  const [currentView, setCurrentView] = useState<ViewMode>('projects');
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
 
   const selectedProject = projects.find(p => p.id === selectedId) || null;
@@ -45,6 +46,12 @@ function App() {
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
+  const handleShowProjects = useCallback(() => {
+    setSelectedId(null);
+    setShowToday(false);
+    setCurrentView('projects');
   }, []);
 
   const handleAddNew = useCallback(() => {
@@ -84,18 +91,29 @@ function App() {
   }, [updateProject]);
 
   const getActiveView = () => {
+    if (currentView === 'projects') return 'projects';
     if (currentView === 'overview') return 'overview';
     if (currentView === 'kanban') return 'kanban';
     if (currentView === 'timeline') return 'timeline';
     if (showToday) return 'today';
     if (selectedProject) return 'detail';
-    return 'overview';
+    return 'projects';
   };
 
   const renderContent = () => {
     const activeView = getActiveView();
 
     switch (activeView) {
+      case 'projects':
+        return (
+          <ProjectListView
+            projects={projects}
+            workspaces={workspaces}
+            onSelectProject={handleSelectProject}
+            onAddNew={handleAddNew}
+          />
+        );
+
       case 'overview':
         return (
           <OverviewDashboard
@@ -148,6 +166,7 @@ function App() {
               onAddCategory={addCategory}
               workspaces={workspaces}
               onTogglePin={togglePin}
+              onBack={handleShowProjects}
             />
           );
         }
@@ -199,6 +218,7 @@ function App() {
         onChangeView={handleChangeView}
         onExport={exportData}
         onImport={importData}
+        onShowProjects={handleShowProjects}
       />
       <div className="flex-1 flex flex-col overflow-hidden">
         <StatsBar projects={projects} />
@@ -216,6 +236,7 @@ function App() {
         onShowOverview={() => handleChangeView('overview')}
         onShowKanban={() => handleChangeView('kanban')}
         onShowTimeline={() => handleChangeView('timeline')}
+        onShowProjects={handleShowProjects}
         onExport={exportData}
       />
     </div>

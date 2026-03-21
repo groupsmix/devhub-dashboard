@@ -12,6 +12,7 @@ interface CommandPaletteProps {
   onShowOverview: () => void;
   onShowKanban: () => void;
   onShowTimeline: () => void;
+  onShowProjects: () => void;
   onExport: () => void;
 }
 
@@ -25,7 +26,7 @@ interface CommandItem {
 
 export default function CommandPalette({
   open, onClose, projects, onSelectProject, onAddProject,
-  onShowToday, onShowOverview, onShowKanban, onShowTimeline, onExport,
+  onShowToday, onShowOverview, onShowKanban, onShowTimeline, onShowProjects, onExport,
 }: CommandPaletteProps) {
   const [query, setQuery] = useState('');
   const [selectedIndex, setSelectedIndex] = useState(0);
@@ -34,6 +35,7 @@ export default function CommandPalette({
   const items = useMemo<CommandItem[]>(() => {
     const actions: CommandItem[] = [
       { id: 'new-project', label: 'New Project', description: 'Create a new project', category: 'action', action: onAddProject },
+      { id: 'projects', label: 'Project List', description: 'View all projects', category: 'view', action: onShowProjects },
       { id: 'today', label: "Today's Focus", description: 'View daily tasks', category: 'view', action: onShowToday },
       { id: 'overview', label: 'Dashboard Overview', description: 'See all stats', category: 'view', action: onShowOverview },
       { id: 'kanban', label: 'Kanban Board', description: 'Visual project board', category: 'view', action: onShowKanban },
@@ -58,7 +60,7 @@ export default function CommandPalette({
       item.label.toLowerCase().includes(q) ||
       (item.description && item.description.toLowerCase().includes(q))
     );
-  }, [query, projects, onAddProject, onShowToday, onShowOverview, onShowKanban, onShowTimeline, onExport, onSelectProject]);
+  }, [query, projects, onAddProject, onShowToday, onShowOverview, onShowKanban, onShowTimeline, onShowProjects, onExport, onSelectProject]);
 
   useEffect(() => {
     if (open) {
