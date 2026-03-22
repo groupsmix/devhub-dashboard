@@ -1,8 +1,11 @@
 /**
  * Google Sheets API Service
  *
- * Communicates with the Google Apps Script web app backend.
- * All data is synced as full state (read all / write all).
+ * In production (Cloudflare Pages), requests go through /api/sheets
+ * which is a server-side proxy — no CORS issues.
+ *
+ * For local development, set VITE_SHEETS_API_URL in .env to call
+ * the Apps Script URL directly (or run wrangler pages dev).
  */
 
 export interface SheetsData {
@@ -13,9 +16,24 @@ export interface SheetsData {
   activity: Record<string, unknown>[];
 }
 
+/**
+ * Get the API endpoint URL.
+ * - In production: uses /api/sheets (Cloudflare Pages Function proxy)
+ * - In development: uses VITE_SHEETS_API_URL env var if set
+ */
 const getApiUrl = (): string | null => {
-  const url = import.meta.env.VITE_SHEETS_API_URL;
-  return url && typeof url === 'string' && url.trim() !== '' ? url.trim() : null;
+  // If VITE_SHEETS_API_URL is set (local dev), use it directly
+  const envUrl = import.meta.env.VITE_SHEETS_API_URL;
+  if (envUrl && typeof envUrl === 'string' && envUrl.trim() !== '') {
+    return envUrl.trim();
+  }
+
+  // In production, use the Cloudflare Pages Function proxy
+  if (import.meta.env.PROD) {
+    return '/api/sheets';
+  }
+
+  return null;
 };
 
 export function isSheetsConfigured(): boolean {
@@ -55,7 +73,7 @@ export async function saveAllData(data: SheetsData): Promise<void> {
 
   const response = await fetch(url, {
     method: 'POST',
-    headers: { 'Content-Type': 'text/plain' }, // Apps Script requires text/plain for CORS
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ action: 'saveAll', data }),
   });
 

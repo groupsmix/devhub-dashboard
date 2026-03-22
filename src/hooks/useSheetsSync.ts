@@ -8,35 +8,28 @@ import {
 
 export type SyncStatus = 'disabled' | 'idle' | 'syncing' | 'error';
 
-interface UseSheetsSync {
-  /** Whether Sheets backend is configured */
-  enabled: boolean;
-  /** Current sync status */
-  status: SyncStatus;
-  /** Last error message, if any */
-  error: string | null;
-  /** Timestamp of last successful sync */
-  lastSynced: Date | null;
-  /** Load all data from Sheets (returns null if not configured) */
-  loadFromSheets: () => Promise<SheetsData | null>;
-  /** Save all data to Sheets (debounced) */
-  saveToSheets: (data: SheetsData) => void;
-  /** Force an immediate save */
-  forceSave: (data: SheetsData) => Promise<void>;
-}
+const DEBOUNCE_MS = 3000;
 
-const DEBOUNCE_MS = 2000;
-
-export function useSheetsSync(): UseSheetsSync {
+/**
+ * Hook for syncing data with Google Sheets.
+ *
+ * Uses refs for the save function to avoid re-render loops.
+ * The returned saveToSheets has a stable identity.
+ */
+export function useSheetsSync() {
   const enabled = isSheetsConfigured();
   const [status, setStatus] = useState<SyncStatus>(enabled ? 'idle' : 'disabled');
   const [error, setError] = useState<string | null>(null);
   const [lastSynced, setLastSynced] = useState<Date | null>(null);
+
   const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const pendingData = useRef<SheetsData | null>(null);
+  const isSaving = useRef(false);
+  const enabledRef = useRef(enabled);
+  enabledRef.current = enabled;
 
   const doSave = useCallback(async (data: SheetsData) => {
-    if (!enabled) return;
+    if (!enabledRef.current || isSaving.current) return;
+    isSaving.current = true;
     setStatus('syncing');
     setError(null);
     try {
@@ -48,11 +41,13 @@ export function useSheetsSync(): UseSheetsSync {
       setError(msg);
       setStatus('error');
       console.error('[SheetsSync] Save error:', msg);
+    } finally {
+      isSaving.current = false;
     }
-  }, [enabled]);
+  }, []);
 
   const loadFromSheets = useCallback(async (): Promise<SheetsData | null> => {
-    if (!enabled) return null;
+    if (!enabledRef.current) return null;
     setStatus('syncing');
     setError(null);
     try {
@@ -67,33 +62,23 @@ export function useSheetsSync(): UseSheetsSync {
       console.error('[SheetsSync] Load error:', msg);
       return null;
     }
-  }, [enabled]);
+  }, []);
+
+  // Stable debounced save — never changes identity
+  const doSaveRef = useRef(doSave);
+  doSaveRef.current = doSave;
 
   const saveToSheets = useCallback((data: SheetsData) => {
-    if (!enabled) return;
-    pendingData.current = data;
+    if (!enabledRef.current) return;
 
     if (debounceTimer.current) {
       clearTimeout(debounceTimer.current);
     }
 
     debounceTimer.current = setTimeout(() => {
-      if (pendingData.current) {
-        doSave(pendingData.current);
-        pendingData.current = null;
-      }
+      doSaveRef.current(data);
     }, DEBOUNCE_MS);
-  }, [enabled, doSave]);
-
-  const forceSave = useCallback(async (data: SheetsData) => {
-    if (!enabled) return;
-    if (debounceTimer.current) {
-      clearTimeout(debounceTimer.current);
-      debounceTimer.current = null;
-    }
-    pendingData.current = null;
-    await doSave(data);
-  }, [enabled, doSave]);
+  }, []);
 
   // Cleanup debounce timer on unmount
   useEffect(() => {
@@ -111,6 +96,5 @@ export function useSheetsSync(): UseSheetsSync {
     lastSynced,
     loadFromSheets,
     saveToSheets,
-    forceSave,
   };
 }
