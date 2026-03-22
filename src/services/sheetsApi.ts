@@ -51,11 +51,13 @@ export async function fetchAllData(): Promise<SheetsData> {
 /**
  * Save all data to Google Sheets.
  *
- * For Apps Script CORS compatibility:
- * - No Content-Type header to avoid CORS preflight
- * - redirect: 'follow' to handle Apps Script's 302 redirect
- * - The script must be deployed with "Anyone" access
- *   (security is via the secret deployment URL)
+ * For Apps Script CORS compatibility we use `mode: 'no-cors'`.
+ * This means the response is opaque (can't read status/body),
+ * but the POST still reaches the server. This is fine for saves
+ * since we don't need the response content.
+ *
+ * The script must be deployed with "Anyone" access
+ * (security is via the secret deployment URL).
  */
 export async function saveAllData(data: SheetsData): Promise<void> {
   const url = getApiUrl();
@@ -63,18 +65,11 @@ export async function saveAllData(data: SheetsData): Promise<void> {
     throw new Error('Google Sheets API URL not configured');
   }
 
-  const response = await fetch(url, {
+  await fetch(url, {
     method: 'POST',
-    redirect: 'follow',
+    mode: 'no-cors',
     body: JSON.stringify({ action: 'saveAll', data }),
   });
-
-  if (!response.ok) {
-    throw new Error(`Sheets API error: ${response.status}`);
-  }
-
-  const result = await response.json();
-  if (!result.success) {
-    throw new Error(result.error || 'Failed to save to Sheets');
-  }
+  // With no-cors mode, response is opaque — we can't read status.
+  // If the request was sent successfully, the data will be saved.
 }

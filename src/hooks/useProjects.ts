@@ -62,7 +62,7 @@ export function useProjects() {
   const [sheetsLoaded, setSheetsLoaded] = useState(false);
   const initialLoadDone = useRef(false);
 
-  const sheetsSync = useSheetsSync();
+  const { enabled: sheetsEnabled, status: syncStatus, error: syncError, lastSynced, loadFromSheets, saveToSheets } = useSheetsSync();
 
   // Save to localStorage on every change
   useEffect(() => { saveToStorage(PROJECTS_KEY, projects); }, [projects]);
@@ -73,10 +73,10 @@ export function useProjects() {
 
   // Load from Sheets on first mount (if configured)
   useEffect(() => {
-    if (!sheetsSync.enabled || initialLoadDone.current) return;
+    if (!sheetsEnabled || initialLoadDone.current) return;
     initialLoadDone.current = true;
 
-    sheetsSync.loadFromSheets().then((data) => {
+    loadFromSheets().then((data) => {
       if (!data) {
         setSheetsLoaded(true);
         return;
@@ -99,29 +99,27 @@ export function useProjects() {
       }
       setSheetsLoaded(true);
     });
-  }, [sheetsSync]);
+  }, [sheetsEnabled, loadFromSheets]);
 
   // If Sheets is not enabled, mark as loaded immediately
   useEffect(() => {
-    if (!sheetsSync.enabled) {
+    if (!sheetsEnabled) {
       setSheetsLoaded(true);
     }
-  }, [sheetsSync.enabled]);
-
-  // Build current SheetsData from state
-  const buildSheetsData = useCallback((): SheetsData => ({
-    projects: projects as unknown as Record<string, unknown>[],
-    todayTasks: todayTasks as unknown as Record<string, unknown>[],
-    categories,
-    workspaces: workspaces as unknown as Record<string, unknown>[],
-    activity: activity as unknown as Record<string, unknown>[],
-  }), [projects, todayTasks, categories, workspaces, activity]);
+  }, [sheetsEnabled]);
 
   // Sync to Sheets whenever data changes (debounced), but only after initial load
   useEffect(() => {
-    if (!sheetsSync.enabled || !sheetsLoaded) return;
-    sheetsSync.saveToSheets(buildSheetsData());
-  }, [sheetsSync, sheetsLoaded, buildSheetsData]);
+    if (!sheetsEnabled || !sheetsLoaded) return;
+    const data: SheetsData = {
+      projects: projects as unknown as Record<string, unknown>[],
+      todayTasks: todayTasks as unknown as Record<string, unknown>[],
+      categories,
+      workspaces: workspaces as unknown as Record<string, unknown>[],
+      activity: activity as unknown as Record<string, unknown>[],
+    };
+    saveToSheets(data);
+  }, [sheetsEnabled, sheetsLoaded, projects, todayTasks, categories, workspaces, activity, saveToSheets]);
 
   const logActivity = useCallback((projectId: string, projectName: string, action: string) => {
     const entry: ActivityEntry = {
@@ -273,9 +271,9 @@ export function useProjects() {
     activity, clearActivity,
     exportData, importData,
     // Sheets sync info
-    syncStatus: sheetsSync.status,
-    syncError: sheetsSync.error,
-    lastSynced: sheetsSync.lastSynced,
-    sheetsEnabled: sheetsSync.enabled,
+    syncStatus,
+    syncError,
+    lastSynced,
+    sheetsEnabled,
   };
 }
