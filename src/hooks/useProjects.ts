@@ -1,5 +1,9 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import type { Project, TodayTask, Workspace, ActivityEntry } from '../types/project';
+import { useSheetsSync } from './useSheetsSync';
+import type { SheetsData } from '../services/sheetsApi';
+
+export type { SyncStatus } from './useSheetsSync';
 
 const PROJECTS_KEY = 'devhub_projects';
 const TASKS_KEY = 'devhub_today_tasks';
@@ -55,12 +59,69 @@ export function useProjects() {
   const [categories, setCategories] = useState<string[]>(() => loadFromStorage(CATEGORIES_KEY, DEFAULT_CATEGORIES));
   const [workspaces, setWorkspaces] = useState<Workspace[]>(() => loadFromStorage(WORKSPACES_KEY, DEFAULT_WORKSPACES));
   const [activity, setActivity] = useState<ActivityEntry[]>(() => loadFromStorage(ACTIVITY_KEY, []));
+  const [sheetsLoaded, setSheetsLoaded] = useState(false);
+  const initialLoadDone = useRef(false);
 
+  const sheetsSync = useSheetsSync();
+
+  // Save to localStorage on every change
   useEffect(() => { saveToStorage(PROJECTS_KEY, projects); }, [projects]);
   useEffect(() => { saveToStorage(TASKS_KEY, todayTasks); }, [todayTasks]);
   useEffect(() => { saveToStorage(CATEGORIES_KEY, categories); }, [categories]);
   useEffect(() => { saveToStorage(WORKSPACES_KEY, workspaces); }, [workspaces]);
   useEffect(() => { saveToStorage(ACTIVITY_KEY, activity); }, [activity]);
+
+  // Load from Sheets on first mount (if configured)
+  useEffect(() => {
+    if (!sheetsSync.enabled || initialLoadDone.current) return;
+    initialLoadDone.current = true;
+
+    sheetsSync.loadFromSheets().then((data) => {
+      if (!data) {
+        setSheetsLoaded(true);
+        return;
+      }
+
+      if (data.projects && data.projects.length > 0) {
+        setProjects(data.projects as unknown as Project[]);
+      }
+      if (data.todayTasks && data.todayTasks.length > 0) {
+        setTodayTasks(data.todayTasks as unknown as TodayTask[]);
+      }
+      if (data.categories && data.categories.length > 0) {
+        setCategories(data.categories);
+      }
+      if (data.workspaces && data.workspaces.length > 0) {
+        setWorkspaces(data.workspaces as unknown as Workspace[]);
+      }
+      if (data.activity && data.activity.length > 0) {
+        setActivity(data.activity as unknown as ActivityEntry[]);
+      }
+      setSheetsLoaded(true);
+    });
+  }, [sheetsSync]);
+
+  // If Sheets is not enabled, mark as loaded immediately
+  useEffect(() => {
+    if (!sheetsSync.enabled) {
+      setSheetsLoaded(true);
+    }
+  }, [sheetsSync.enabled]);
+
+  // Build current SheetsData from state
+  const buildSheetsData = useCallback((): SheetsData => ({
+    projects: projects as unknown as Record<string, unknown>[],
+    todayTasks: todayTasks as unknown as Record<string, unknown>[],
+    categories,
+    workspaces: workspaces as unknown as Record<string, unknown>[],
+    activity: activity as unknown as Record<string, unknown>[],
+  }), [projects, todayTasks, categories, workspaces, activity]);
+
+  // Sync to Sheets whenever data changes (debounced), but only after initial load
+  useEffect(() => {
+    if (!sheetsSync.enabled || !sheetsLoaded) return;
+    sheetsSync.saveToSheets(buildSheetsData());
+  }, [sheetsSync, sheetsLoaded, buildSheetsData]);
 
   const logActivity = useCallback((projectId: string, projectName: string, action: string) => {
     const entry: ActivityEntry = {
@@ -211,5 +272,10 @@ export function useProjects() {
     workspaces, addWorkspace, updateWorkspace, deleteWorkspace,
     activity, clearActivity,
     exportData, importData,
+    // Sheets sync info
+    syncStatus: sheetsSync.status,
+    syncError: sheetsSync.error,
+    lastSynced: sheetsSync.lastSynced,
+    sheetsEnabled: sheetsSync.enabled,
   };
 }
