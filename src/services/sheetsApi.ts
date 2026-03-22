@@ -24,6 +24,10 @@ export function isSheetsConfigured(): boolean {
 
 /**
  * Fetch all data from Google Sheets.
+ *
+ * Google Apps Script redirects (302) to the actual response URL.
+ * Using redirect: 'follow' (default) handles this automatically
+ * when the script is deployed with "Anyone" access.
  */
 export async function fetchAllData(): Promise<SheetsData> {
   const url = getApiUrl();
@@ -31,7 +35,7 @@ export async function fetchAllData(): Promise<SheetsData> {
     throw new Error('Google Sheets API URL not configured');
   }
 
-  const response = await fetch(url);
+  const response = await fetch(url, { redirect: 'follow' });
   if (!response.ok) {
     throw new Error(`Sheets API error: ${response.status}`);
   }
@@ -46,6 +50,12 @@ export async function fetchAllData(): Promise<SheetsData> {
 
 /**
  * Save all data to Google Sheets.
+ *
+ * For Apps Script CORS compatibility:
+ * - No Content-Type header to avoid CORS preflight
+ * - redirect: 'follow' to handle Apps Script's 302 redirect
+ * - The script must be deployed with "Anyone" access
+ *   (security is via the secret deployment URL)
  */
 export async function saveAllData(data: SheetsData): Promise<void> {
   const url = getApiUrl();
@@ -55,7 +65,7 @@ export async function saveAllData(data: SheetsData): Promise<void> {
 
   const response = await fetch(url, {
     method: 'POST',
-    headers: { 'Content-Type': 'text/plain' }, // Apps Script requires text/plain for CORS
+    redirect: 'follow',
     body: JSON.stringify({ action: 'saveAll', data }),
   });
 
